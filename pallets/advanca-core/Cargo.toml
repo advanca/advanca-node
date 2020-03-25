@@ -1,0 +1,86 @@
+[package]
+authors = ['Advanca Authors']
+edition = '2018'
+license = 'GPL-3.0'
+name = 'advanca-core'
+version = '0.1.0'
+
+[dev-dependencies.sp-core]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dev-dependencies.sp-io]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dev-dependencies.sp-runtime]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dev-dependencies.balances]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-balances'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[features]
+default = ['std']
+std = [
+    'codec/std',
+    'frame-support/std',
+    'safe-mix/std',
+    'system/std',
+    'sp-runtime/std',
+    'sp-std/std',
+    'sp-api/std',
+]
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '1.0.0'
+
+[dependencies.frame-support]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dependencies.safe-mix]
+default-features = false
+version = '1.0.0'
+
+[dependencies.system]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'frame-system'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dependencies.sp-runtime]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dependencies.sp-std]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dependencies.sp-api]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+version = '2.0.0'
+
+[dependencies.smart-default]
+default-features = false
+version = "0.6.0"
