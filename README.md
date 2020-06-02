@@ -1,5 +1,7 @@
 # Advanca Node
 
+[![](https://github.com/advanca/advanca-node/workflows/Rust/badge.svg)](https://github.com/advanca/advanca-node/actions?query=workflow%3ARust)
+
 This repository contains the source code for Advanca Node.
 
 See [advanca/advanca](https://github.com/advanca/advanca) for more information.
