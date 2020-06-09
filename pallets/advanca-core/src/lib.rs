@@ -130,6 +130,8 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     pub status: TaskStatus,
     /// The user who submitted the task
     pub owner: AccountId,
+    /// The user's signed task key
+    pub signed_owner_task_pubkey: Vec<u8>,
     /// The owner-determined task duration. Default to 0 for unlimited time.
     pub lease: Duration,
     /// The detailed specification of a task
@@ -137,7 +139,7 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     /// The worker who accepted the task. It may be none at the beginning.
     pub worker: Option<AccountId>,
     /// The worker's ephemeral key for the particular task signed using its registered key
-    pub worker_signed_ephemeral_pubkey: Option<Vec<u8>>,
+    pub signed_worker_task_pubkey: Option<Vec<u8>>,
     /// The worker's service url saved in ciphertext encrypted by owner's public key
     pub worker_url: Option<Ciphertext>,
 }
@@ -235,11 +237,12 @@ decl_module! {
             Ok(())
         }
 
-        pub fn submit_task(origin, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
+        pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
             let task_id = Self::task_id(&owner, <system::Module<T>>::account_nonce(&owner));
             Tasks::<T>::insert(task_id.clone(), Task{
+                signed_owner_task_pubkey,
                 owner, task_id, lease, task_spec, ..Default::default()
             });
 
@@ -272,7 +275,7 @@ decl_module! {
         ///
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
-        pub fn accept_task(origin, task_id: TaskId<T>, eph_pubkey: Vec<u8>, eph_signature: Vec<u8>, url: Ciphertext) -> DispatchResult {
+        pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
             //TODO: use pre-defined error
@@ -287,8 +290,7 @@ decl_module! {
             Tasks::<T>::mutate(task_id.clone(), |t| {
                 t.status = TaskStatus::Scheduled;
                 t.worker = Some(worker);
-                t.worker_ephemeral_pubkey = Some(eph_pubkey);
-                t.worker_ephemeral_signature = Some(eph_signature);
+                t.signed_worker_task_pubkey = Some(signed_eph_pubkey);
                 t.worker_url = Some(url);
             });
 
