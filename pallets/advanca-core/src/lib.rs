@@ -136,6 +136,10 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     pub task_spec: TaskSpec,
     /// The worker who accepted the task. It may be none at the beginning.
     pub worker: Option<AccountId>,
+    /// The worker's ephemeral key for the particular task
+    pub worker_ephemeral_pubkey: Option<Vec<u8>>,
+    /// The signature for the worker's ephemeral pubkey using the worker's registered private key
+    pub worker_ephemeral_signature: Option<Vec<u8>>,
     /// The worker's service url saved in ciphertext encrypted by owner's public key
     pub worker_url: Option<Ciphertext>,
 }
@@ -270,7 +274,7 @@ decl_module! {
         ///
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
-        pub fn accept_task(origin, task_id: TaskId<T>, url: Ciphertext) -> DispatchResult {
+        pub fn accept_task(origin, task_id: TaskId<T>, eph_pubkey: Vec<u8>, eph_signature: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
             //TODO: use pre-defined error
@@ -285,6 +289,8 @@ decl_module! {
             Tasks::<T>::mutate(task_id.clone(), |t| {
                 t.status = TaskStatus::Scheduled;
                 t.worker = Some(worker);
+                t.worker_ephemeral_pubkey = Some(eph_pubkey);
+                t.worker_ephemeral_signature = Some(eph_signature);
                 t.worker_url = Some(url);
             });
 
