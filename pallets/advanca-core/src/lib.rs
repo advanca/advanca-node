@@ -136,10 +136,8 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     pub task_spec: TaskSpec,
     /// The worker who accepted the task. It may be none at the beginning.
     pub worker: Option<AccountId>,
-    /// The worker's ephemeral key for the particular task
-    pub worker_ephemeral_pubkey: Option<Vec<u8>>,
-    /// The signature for the worker's ephemeral pubkey using the worker's registered private key
-    pub worker_ephemeral_signature: Option<Vec<u8>>,
+    /// The worker's ephemeral key for the particular task signed using its registered key
+    pub worker_signed_ephemeral_pubkey: Option<Vec<u8>>,
     /// The worker's service url saved in ciphertext encrypted by owner's public key
     pub worker_url: Option<Ciphertext>,
 }
