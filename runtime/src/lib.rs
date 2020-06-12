@@ -255,22 +255,22 @@ impl advanca_core::Trait for Runtime {
 }
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: system::{Module, Call, Storage, Config, Event},
-		Timestamp: timestamp::{Module, Call, Storage, Inherent},
-		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
-		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
-		Indices: indices,
-		Balances: balances,
-		TransactionPayment: transaction_payment::{Module, Storage},
-		Sudo: sudo,
+    pub enum Runtime where
+        Block = Block,
+        NodeBlock = opaque::Block,
+        UncheckedExtrinsic = UncheckedExtrinsic
+    {
+        System: system::{Module, Call, Storage, Config, Event},
+        Timestamp: timestamp::{Module, Call, Storage, Inherent},
+        Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
+        Grandpa: grandpa::{Module, Call, Storage, Config, Event},
+        Indices: indices,
+        Balances: balances,
+        TransactionPayment: transaction_payment::{Module, Storage},
+        Sudo: sudo,
         AdvancaCore: advanca_core::{Module, Call, Storage, Event<T>},
-		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
-	}
+        RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
+    }
 );
 
 /// The address format for describing accounts.
