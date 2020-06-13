@@ -1,4 +1,4 @@
-FROM rust:1.42.0 as builder
+FROM rust:1.44.0-slim as builder
 LABEL maintainer "Advanca Authors"
 LABEL description="This is the build stage for advanca-node"
 
@@ -16,7 +16,7 @@ RUN rustup toolchain install nightly && \
 
 # ===== SECOND STAGE ======
 
-FROM rust:1.42.0
+FROM rust:1.44.0-slim
 LABEL maintainer "Advanca Authors"
 LABEL description="This is the 2nd stage"
 
