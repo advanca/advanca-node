@@ -31,8 +31,8 @@ use smart_default::SmartDefault;
 use sp_api::HashT;
 use sp_runtime::RuntimeDebug;
 
-use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed};
+use sp_std::prelude::*;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
