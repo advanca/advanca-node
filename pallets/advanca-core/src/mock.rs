@@ -104,8 +104,13 @@ pub type System = system::Module<TestRuntime>;
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
+    let t = system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
-        .unwrap()
-        .into()
+        .unwrap();
+
+    let mut ext: sp_io::TestExternalities = t.into();
+    // NOTE: events are not emitted at genesis block, so proceed the block by 1.
+    // See https://github.com/paritytech/substrate/pull/5463
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }

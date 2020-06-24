@@ -82,7 +82,11 @@ fn registration() {
             }
         );
         assert_eq!(
-            System::events().last().unwrap().event,
+            System::events()
+                .iter()
+                .last()
+                .expect("Should have an event")
+                .event,
             TestEvent::advanca_core(RawEvent::UserAdded(user_account.clone()))
         );
 
@@ -113,7 +117,6 @@ fn submit_task() {
         let lease = Default::default();
         let task_spec: TaskSpec<Privacy> = Default::default();
         let signed_owner_task_pubkey: Vec<u8> = "owner_task_pubkey".into();
-        let signed_worker_task_pubkey: Vec<u8> = "worker_task_pubkey".into();
         // make sure panics panic
         assert_noop!(
             AdvancaCore::submit_task(
@@ -170,7 +173,7 @@ fn submit_task() {
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
-                signed_worker_task_pubkey: Some(signed_worker_task_pubkey.clone()),
+                signed_worker_task_pubkey: None,
                 worker_url: None,
             }
         );
@@ -184,7 +187,7 @@ fn submit_task() {
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
-                signed_worker_task_pubkey: Some(signed_worker_task_pubkey),
+                signed_worker_task_pubkey: None,
                 worker_url: None,
             }
         );
@@ -392,7 +395,7 @@ fn abort_task() {
         assert_eq!(Tasks::<TestRuntime>::contains_key(task_id), false);
 
         assert_eq!(
-            System::events().last().unwrap().event,
+            System::events().last().expect("should have an event").event,
             TestEvent::advanca_core(RawEvent::TaskAborted(task_id))
         );
     })
