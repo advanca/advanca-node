@@ -41,8 +41,8 @@ version = '2.0.0-alpha.8'
 [dev-dependencies.balances]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'pallet-balances'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+rev = '7e9a2ae78d27cc56e053fbec3b34a1a258b89561'
+version = '2.0.0-alpha.8'
 
 [dependencies.codec]
 default-features = false
