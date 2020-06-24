@@ -92,6 +92,8 @@ pub enum TaskStatus {
     Unscheduled,
     /// The task is taken by a worker
     Scheduled,
+    /// The task is completed or aborted
+    Done,
 }
 
 #[derive(Encode, Decode, SmartDefault, RuntimeDebug, PartialEq, Eq, Clone)]
@@ -142,6 +144,8 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     pub signed_worker_task_pubkey: Option<Vec<u8>>,
     /// The worker's service url saved in ciphertext encrypted by owner's public key
     pub worker_url: Option<Ciphertext>,
+    /// Worker's heartbeat evidence
+    pub worker_heartbeat_evidence: Vec<Vec<u8>>,
 }
 
 // Error from the module
@@ -252,6 +256,18 @@ decl_module! {
             Ok(())
         }
 
+        pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
+            let worker = ensure_signed(origin)?;
+
+            ensure!(Tasks::<T>::contains_key(task_id.clone()), "task_id must exist");
+            let task = Tasks::<T>::get(task_id.clone());
+            ensure!(task.worker == Some(worker), "only worker can update this task");
+            for evidence in evidences {
+                Tasks::<T>::mutate(task_id.clone(), |t| t.worker_heartbeat_evidence.push(evidence));
+            }
+            Ok(())
+        }
+
         /// Updates a task
         ///
         /// Currently only updating TaskSpec is allowed.
@@ -310,7 +326,10 @@ decl_module! {
             //TODO: use pre-defined error
             ensure!(task.owner == owner, "only owner can abort the task");
 
-            Tasks::<T>::remove(task_id.clone());
+            //Tasks::<T>::remove(task_id);
+            Tasks::<T>::mutate(task_id.clone(), |t| {
+                t.status = TaskStatus::Done;
+            });
 
             Self::deposit_event(RawEvent::TaskAborted(task_id));
             Ok(())
@@ -325,7 +344,10 @@ decl_module! {
             //TODO: use pre-defined error
             ensure!(task.worker == Some(worker), "only the worker can complete this task");
 
-            Tasks::<T>::remove(task_id);
+            //Tasks::<T>::remove(task_id);
+            Tasks::<T>::mutate(task_id.clone(), |t| {
+                t.status = TaskStatus::Done;
+            });
 
             Self::deposit_event(RawEvent::TaskCompleted(task_id));
             Ok(())
