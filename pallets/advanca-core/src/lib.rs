@@ -32,7 +32,7 @@ use sp_api::HashT;
 use sp_runtime::RuntimeDebug;
 
 use sp_std::prelude::*;
-use system::ensure_signed;
+use frame_system::{self as system, ensure_signed};
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -161,15 +161,15 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as AdvancaCore {
         /// Registered users
-        Users get(fn get_user): map hasher(blake2_256) T::AccountId => User<T::AccountId>;
+        Users get(fn get_user): map hasher(opaque_blake2_256) T::AccountId => User<T::AccountId>;
         /// Registered workers
-        Workers get(fn get_worker): map hasher(blake2_256) T::AccountId => Worker<T::AccountId>;
+        Workers get(fn get_worker): map hasher(opaque_blake2_256) T::AccountId => Worker<T::AccountId>;
 
         /// Saved tasks
         ///
         /// Note only the tasks in unscheduled or scheduled state are saved in this map.
         /// Any completed or aborted tasks are removed from chain to save space
-        Tasks get(fn get_task): map hasher(blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
+        Tasks get(fn get_task): map hasher(opaque_blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
 
         /// Unscheduled tasks
         ///
@@ -187,6 +187,7 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn register_worker(origin, deposit: BalanceOf<T>, enclave: Enclave<T::AccountId>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -200,6 +201,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn deregister_worker(origin) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -214,6 +216,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn register_user(origin, deposit: BalanceOf<T>, public_key: Vec<u8>) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -227,6 +230,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn deregister_user(origin) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -241,6 +245,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -271,6 +276,7 @@ decl_module! {
         /// Updates a task
         ///
         /// Currently only updating TaskSpec is allowed.
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn update_task(origin, task_id: TaskId<T>, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -291,6 +297,7 @@ decl_module! {
         ///
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -317,6 +324,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn abort_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -335,6 +343,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn complete_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -354,6 +363,7 @@ decl_module! {
         }
 
         //TODO: TBD
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn progress_task(origin) -> DispatchResult {
             let _who = ensure_signed(origin)?;
 

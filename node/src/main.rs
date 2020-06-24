@@ -24,19 +24,6 @@ mod service;
 mod cli;
 mod command;
 
-pub use sc_cli::{error, VersionInfo};
-
-fn main() -> Result<(), error::Error> {
-    let version = VersionInfo {
-        name: "Advanca Node",
-        commit: env!("VERGEN_SHA_SHORT"),
-        version: env!("CARGO_PKG_VERSION"),
-        executable_name: "advanca-node",
-        author: "Advanca Authors",
-        description: "Advanca node implementations based on Substrate",
-        support_url: "https://github.com/AdvancaNetwork/",
-        copyright_start_year: 2020,
-    };
-
-    command::run(version)
+fn main() -> sc_cli::Result<()> {
+    command::run()
 }
