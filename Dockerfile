@@ -1,4 +1,4 @@
-FROM rust:1.42.0 as builder
+FROM rust:1.44.0 as builder
 LABEL maintainer "Advanca Authors"
 LABEL description="This is the build stage for advanca-node"
 
@@ -10,13 +10,16 @@ COPY . /advanca
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends cmake clang
 
-RUN rustup toolchain install nightly && \
-    rustup target add wasm32-unknown-unknown --toolchain nightly && \
-    cargo build --$PROFILE
+RUN rustup toolchain install nightly-2020-04-07 && \
+    rustup default nightly-2020-04-07 && \
+    rustup target add wasm32-unknown-unknown --toolchain nightly-2020-04-07
+
+ENV RUSTC_BOOTSTRAP=1
+RUN cargo build --$PROFILE
 
 # ===== SECOND STAGE ======
 
-FROM rust:1.42.0
+FROM rust:1.44.0
 LABEL maintainer "Advanca Authors"
 LABEL description="This is the 2nd stage"
 
