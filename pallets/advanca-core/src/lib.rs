@@ -92,8 +92,10 @@ pub enum TaskStatus {
     Unscheduled,
     /// The task is taken by a worker
     Scheduled,
-    /// The task is completed or aborted
+    /// The task is completed
     Done,
+    /// The task is aborted
+    Abort,
 }
 
 #[derive(Encode, Decode, SmartDefault, RuntimeDebug, PartialEq, Eq, Clone)]
@@ -280,6 +282,7 @@ decl_module! {
             let task = Tasks::<T>::get(task_id.clone());
             //TODO: use pre-defined error
             ensure!(task.owner == owner, "only owner can update this task");
+            ensure!(task.status != TaskStatus::Done, "task must not be Done");
 
             Tasks::<T>::mutate(task_id.clone(), |t| t.task_spec = task_spec);
 
@@ -328,7 +331,7 @@ decl_module! {
 
             //Tasks::<T>::remove(task_id);
             Tasks::<T>::mutate(task_id.clone(), |t| {
-                t.status = TaskStatus::Done;
+                t.status = TaskStatus::Abort;
             });
 
             Self::deposit_event(RawEvent::TaskAborted(task_id));
