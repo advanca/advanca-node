@@ -117,6 +117,7 @@ fn submit_task() {
         let lease = Default::default();
         let task_spec: TaskSpec<Privacy> = Default::default();
         let signed_owner_task_pubkey: Vec<u8> = "owner_task_pubkey".into();
+        let worker_heartbeat_evidence: Vec<Vec<u8>> = Default::default();
         // make sure panics panic
         assert_noop!(
             AdvancaCore::submit_task(
@@ -175,6 +176,7 @@ fn submit_task() {
                 worker: None,
                 signed_worker_task_pubkey: None,
                 worker_url: None,
+                worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
         );
         assert_eq!(
@@ -189,6 +191,7 @@ fn submit_task() {
                 worker: None,
                 signed_worker_task_pubkey: None,
                 worker_url: None,
+                worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
         );
     });
@@ -309,6 +312,7 @@ fn update_task() {
         let fake_task_id = AdvancaCore::task_id(&fake_account, 0);
         let task_spec: TaskSpec<Privacy> = Default::default();
         let signed_owner_task_pubkey: Vec<u8> = "signed_owner_task_pubkey".into();
+        let worker_heartbeat_evidence = Default::default();
 
         // make sure panics panic
         assert_noop!(
@@ -353,6 +357,7 @@ fn update_task() {
                 lease: lease,
                 task_spec: task_spec_update,
                 worker_url: None,
+                worker_heartbeat_evidence
             }
         )
     })
@@ -392,7 +397,8 @@ fn abort_task() {
         );
 
         assert_ok!(AdvancaCore::abort_task(Origin::signed(account), task_id));
-        assert_eq!(Tasks::<TestRuntime>::contains_key(task_id), false);
+        assert_eq!(Tasks::<TestRuntime>::contains_key(task_id), true);
+        assert_eq!(Tasks::<TestRuntime>::get(task_id).status, TaskStatus::Done);
 
         assert_eq!(
             System::events().last().expect("should have an event").event,
