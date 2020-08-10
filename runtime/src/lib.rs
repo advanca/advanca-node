@@ -31,7 +31,7 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, IdentityLookup, NumberFor, Verify,
+    BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, NumberFor, Saturating, Verify,
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
@@ -50,7 +50,7 @@ pub use frame_support::{
     traits::{KeyOwnerProofSystem, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-        Weight,
+        IdentityFee, Weight,
     },
     StorageValue,
 };
@@ -112,10 +112,9 @@ pub mod opaque {
     }
 }
 
-/// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("advanca-node"),
-    impl_name: create_runtime_str!("advanca-node"),
+    spec_name: create_runtime_str!("advanca-core"),
+    impl_name: create_runtime_str!("advanca-core"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 1,
@@ -127,7 +126,7 @@ pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
-// These time units are defined in number of blocks.
+// Time is measured by number of blocks.
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
@@ -146,11 +145,18 @@ parameter_types! {
     /// We allow for 2 seconds of compute with a 6 second average block time.
     pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    /// Assume 10% of weight for average on_initialize calls.
+    pub MaximumExtrinsicWeight: Weight = AvailableBlockRatio::get()
+        .saturating_sub(Perbill::from_percent(10)) * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
 }
 
+// Configure FRAME pallets to include in runtime.
+
 impl system::Trait for Runtime {
+    /// The basic call filter to use in dispatchable.
+    type BaseCallFilter = ();
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
     /// The aggregated dispatch type that is available for extrinsics.
@@ -183,6 +189,10 @@ impl system::Trait for Runtime {
     /// The base weight of any extrinsic processed by the runtime, independent of the
     /// logic of that extrinsic. (Signature verification, nonce increment, fee, etc...)
     type ExtrinsicBaseWeight = ExtrinsicBaseWeight;
+    /// The maximum weight that a single extrinsic of `Normal` dispatch class can have,
+    /// idependent of the logic of that extrinsics. (Roughly max block weight - average on
+    /// initialize cost).
+    type MaximumExtrinsicWeight = MaximumExtrinsicWeight;
     /// Maximum size of all encoded transactions (in bytes) that are allowed in one block.
     type MaximumBlockLength = MaximumBlockLength;
     /// Portion of the block weight that is available to all normal transactions.
@@ -199,6 +209,8 @@ impl system::Trait for Runtime {
     type OnKilledAccount = ();
     /// The data to be stored in an account.
     type AccountData = balances::AccountData<Balance>;
+    /// Weight information for the extrinsics of this pallet.
+    type SystemWeightInfo = ();
 }
 
 impl aura::Trait for Runtime {
@@ -231,6 +243,7 @@ impl timestamp::Trait for Runtime {
     type Moment = u64;
     type OnTimestampSet = Aura;
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -245,6 +258,7 @@ impl balances::Trait for Runtime {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -255,7 +269,7 @@ impl transaction_payment::Trait for Runtime {
     type Currency = balances::Module<Runtime>;
     type OnTransactionPayment = ();
     type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = ConvertInto;
+    type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
 }
 
@@ -270,6 +284,7 @@ impl advanca_core::Trait for Runtime {
     type Currency = Balances;
 }
 
+// Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -279,7 +294,7 @@ construct_runtime!(
         System: system::{Module, Call, Config, Storage, Event<T>},
         RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
         Timestamp: timestamp::{Module, Call, Storage, Inherent},
-        Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
+        Aura: aura::{Module, Config<T>, Inherent},
         Grandpa: grandpa::{Module, Call, Storage, Config, Event},
         Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: transaction_payment::{Module, Storage},
@@ -405,7 +420,7 @@ impl_runtime_apis! {
             Grandpa::grandpa_authorities()
         }
 
-        fn submit_report_equivocation_extrinsic(
+        fn submit_report_equivocation_unsigned_extrinsic(
             _equivocation_proof: fg_primitives::EquivocationProof<
                 <Block as BlockT>::Hash,
                 NumberFor<Block>,
