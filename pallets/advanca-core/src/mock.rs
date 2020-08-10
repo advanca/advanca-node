@@ -46,6 +46,7 @@ parameter_types! {
     pub const CreationFee: u64 = 0;
 }
 impl system::Trait for TestRuntime {
+    type BaseCallFilter = ();
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -61,6 +62,7 @@ impl system::Trait for TestRuntime {
     type DbWeight = ();
     type BlockExecutionWeight = ();
     type ExtrinsicBaseWeight = ();
+    type MaximumExtrinsicWeight = MaximumBlockWeight;
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
@@ -68,6 +70,7 @@ impl system::Trait for TestRuntime {
     type AccountData = balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type SystemWeightInfo = ();
 }
 
 impl balances::Trait for TestRuntime {
@@ -76,6 +79,7 @@ impl balances::Trait for TestRuntime {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type WeightInfo = ();
 }
 
 mod advanca_core {

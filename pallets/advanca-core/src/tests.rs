@@ -44,11 +44,11 @@ fn registration() {
         let enclave: Enclave<u64> = Default::default();
 
         assert_noop!(
-            AdvancaCore::register_user(Origin::NONE, deposit, user_public_key.clone()),
+            AdvancaCore::register_user(Origin::none(), deposit, user_public_key.clone()),
             DispatchError::BadOrigin
         );
         assert_noop!(
-            AdvancaCore::register_worker(Origin::NONE, deposit, enclave.clone()),
+            AdvancaCore::register_worker(Origin::none(), deposit, enclave.clone()),
             DispatchError::BadOrigin
         );
 
@@ -120,7 +120,7 @@ fn submit_task() {
         // make sure panics panic
         assert_noop!(
             AdvancaCore::submit_task(
-                Origin::NONE,
+                Origin::none(),
                 signed_owner_task_pubkey.to_owned(),
                 lease,
                 task_spec.clone()
@@ -207,7 +207,7 @@ fn accept_task() {
         // ensure origin is checked
         assert_noop!(
             AdvancaCore::accept_task(
-                Origin::NONE,
+                Origin::none(),
                 fake_task_id,
                 signed_eph_pubkey.clone(),
                 url.clone()
@@ -312,7 +312,7 @@ fn update_task() {
 
         // make sure panics panic
         assert_noop!(
-            AdvancaCore::update_task(Origin::NONE, fake_task_id, task_spec.clone()),
+            AdvancaCore::update_task(Origin::none(), fake_task_id, task_spec.clone()),
             DispatchError::BadOrigin
         );
 
@@ -370,7 +370,7 @@ fn abort_task() {
 
         // make sure panics panic
         assert_noop!(
-            AdvancaCore::abort_task(Origin::NONE, default),
+            AdvancaCore::abort_task(Origin::none(), default),
             DispatchError::BadOrigin
         );
 
