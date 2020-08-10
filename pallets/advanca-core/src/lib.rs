@@ -21,6 +21,8 @@ mod mock;
 mod tests;
 
 use frame_support::traits::{Currency, ReservableCurrency};
+use frame_support::traits::BalanceStatus;
+
 use frame_support::{
     codec::{Decode, Encode},
     decl_error, decl_event, decl_module, decl_storage,
@@ -33,6 +35,9 @@ use sp_runtime::RuntimeDebug;
 
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
+
+const PER_BLOCK_COST: u32 = 1_000_000;
+const PER_DAY_BLOCKS: u32 = 14_400; 
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -249,6 +254,16 @@ decl_module! {
         pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
+            // we'll reserve the amount for task creation here
+            let reserved_amount = if lease == 0 {
+                // keep at least 10 days worth of deposit
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(PER_DAY_BLOCKS) * BalanceOf::<T>::from(10)
+            } else {
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(lease as u32)
+            };
+
+            T::Currency::reserve(&owner, reserved_amount)?;
+
             let task_id = Self::task_id(&owner, <system::Module<T>>::account_nonce(&owner));
             Tasks::<T>::insert(task_id.clone(), Task{
                 signed_owner_task_pubkey,
@@ -261,6 +276,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -351,12 +367,35 @@ decl_module! {
             ensure!(Tasks::<T>::contains_key(task_id.clone()), "task_id must exist");
             let task = Tasks::<T>::get(task_id.clone());
             //TODO: use pre-defined error
-            ensure!(task.worker == Some(worker), "only the worker can complete this task");
+            ensure!(task.worker == Some(worker.clone()), "only the worker can complete this task");
+
+            // get the task information
+            let task = Tasks::<T>::get(task_id.clone());
+
+            // here, we are recalculating the amount that is reserved for this task, maybe we
+            // should consider storing it somewhere
+            let lease = task.lease;
+            let reserved_amount = if lease == 0 {
+                // keep at least 10 days worth of deposit
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(PER_DAY_BLOCKS) * BalanceOf::<T>::from(10)
+            } else {
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(lease as u32)
+            };
+
+            let blocks_alive: BalanceOf<T> = (task.worker_heartbeat_evidence.len() as u32).into();
+
+            // we multiply by 1000 to make the value larger for demo purpose
+            let task_fees: BalanceOf<T> = blocks_alive * PER_BLOCK_COST.into() * 1000.into();
+
+            T::Currency::repatriate_reserved(&task.owner, &worker, task_fees, BalanceStatus::Free)?;
 
             //Tasks::<T>::remove(task_id);
             Tasks::<T>::mutate(task_id.clone(), |t| {
                 t.status = TaskStatus::Done;
             });
+
+            // unreserve the remaining amount for this job
+            T::Currency::unreserve(&task.owner, reserved_amount - task_fees);
 
             Self::deposit_event(RawEvent::TaskCompleted(task_id));
             Ok(())
