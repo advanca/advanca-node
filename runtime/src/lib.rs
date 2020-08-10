@@ -26,15 +26,16 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use grandpa::fg_primitives;
-use grandpa::AuthorityList as GrandpaAuthorityList;
+use grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::OpaqueMetadata;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{
-    BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, StaticLookup, Verify,
+    BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, NumberFor, Saturating, Verify,
 };
 use sp_runtime::{
-    create_runtime_str, generic, impl_opaque_keys, transaction_validity::TransactionValidity,
+    create_runtime_str, generic, impl_opaque_keys,
+    transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
 use sp_std::prelude::*;
@@ -45,7 +46,13 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use balances::Call as BalancesCall;
 pub use frame_support::{
-    construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue,
+    construct_runtime, parameter_types,
+    traits::{KeyOwnerProofSystem, Randomness},
+    weights::{
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        IdentityFee, Weight,
+    },
+    StorageValue,
 };
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -84,7 +91,7 @@ pub type DigestItem = generic::DigestItem<Hash>;
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
-/// to even the core datastructures.
+/// to even the core data structures.
 pub mod opaque {
     use super::*;
 
@@ -105,26 +112,26 @@ pub mod opaque {
     }
 }
 
-/// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("advanca-node"),
-    impl_name: create_runtime_str!("advanca-node"),
+    spec_name: create_runtime_str!("advanca-core"),
+    impl_name: create_runtime_str!("advanca-core"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
 };
 
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
-// These time units are defined in number of blocks.
+// Time is measured by number of blocks.
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
-/// The version infromation used to identify this runtime when compiled natively.
+/// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
     NativeVersion {
@@ -134,20 +141,28 @@ pub fn native_version() -> NativeVersion {
 }
 
 parameter_types! {
-    pub const BlockHashCount: BlockNumber = 250;
-    pub const MaximumBlockWeight: Weight = 1_000_000;
+    pub const BlockHashCount: BlockNumber = 2400;
+    /// We allow for 2 seconds of compute with a 6 second average block time.
+    pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    /// Assume 10% of weight for average on_initialize calls.
+    pub MaximumExtrinsicWeight: Weight = AvailableBlockRatio::get()
+        .saturating_sub(Perbill::from_percent(10)) * MaximumBlockWeight::get();
     pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
     pub const Version: RuntimeVersion = VERSION;
 }
 
+// Configure FRAME pallets to include in runtime.
+
 impl system::Trait for Runtime {
+    /// The basic call filter to use in dispatchable.
+    type BaseCallFilter = ();
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
     /// The aggregated dispatch type that is available for extrinsics.
     type Call = Call;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = Indices;
+    type Lookup = IdentityLookup<AccountId>;
     /// The index type for storing how many extrinsics an account has signed.
     type Index = Index;
     /// The index type for blocks.
@@ -166,6 +181,18 @@ impl system::Trait for Runtime {
     type BlockHashCount = BlockHashCount;
     /// Maximum weight of each block.
     type MaximumBlockWeight = MaximumBlockWeight;
+    /// The weight of database operations that the runtime can invoke.
+    type DbWeight = RocksDbWeight;
+    /// The weight of the overhead invoked on the block import process, independent of the
+    /// extrinsics included in that block.
+    type BlockExecutionWeight = BlockExecutionWeight;
+    /// The base weight of any extrinsic processed by the runtime, independent of the
+    /// logic of that extrinsic. (Signature verification, nonce increment, fee, etc...)
+    type ExtrinsicBaseWeight = ExtrinsicBaseWeight;
+    /// The maximum weight that a single extrinsic of `Normal` dispatch class can have,
+    /// idependent of the logic of that extrinsics. (Roughly max block weight - average on
+    /// initialize cost).
+    type MaximumExtrinsicWeight = MaximumExtrinsicWeight;
     /// Maximum size of all encoded transactions (in bytes) that are allowed in one block.
     type MaximumBlockLength = MaximumBlockLength;
     /// Portion of the block weight that is available to all normal transactions.
@@ -176,6 +203,14 @@ impl system::Trait for Runtime {
     ///
     /// This type is being generated by `construct_runtime!`.
     type ModuleToIndex = ModuleToIndex;
+    /// What to do if a new account is created.
+    type OnNewAccount = ();
+    /// What to do if an account is fully reaped from the system.
+    type OnKilledAccount = ();
+    /// The data to be stored in an account.
+    type AccountData = balances::AccountData<Balance>;
+    /// Weight information for the extrinsics of this pallet.
+    type SystemWeightInfo = ();
 }
 
 impl aura::Trait for Runtime {
@@ -184,18 +219,19 @@ impl aura::Trait for Runtime {
 
 impl grandpa::Trait for Runtime {
     type Event = Event;
-}
+    type Call = Call;
 
-impl indices::Trait for Runtime {
-    /// The type for recording indexing into the account enumeration. If this ever overflows, there
-    /// will be problems!
-    type AccountIndex = AccountIndex;
-    /// Use the standard means of resolving an index hint from an id.
-    type ResolveHint = indices::SimpleResolveHint<Self::AccountId, Self::AccountIndex>;
-    /// Determine whether an account is dead.
-    type IsDeadAccount = Balances;
-    /// The ubiquitous event type.
-    type Event = Event;
+    type KeyOwnerProofSystem = ();
+
+    type KeyOwnerProof =
+        <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+
+    type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+        KeyTypeId,
+        GrandpaId,
+    )>>::IdentificationTuple;
+
+    type HandleEquivocation = ();
 }
 
 parameter_types! {
@@ -207,45 +243,39 @@ impl timestamp::Trait for Runtime {
     type Moment = u64;
     type OnTimestampSet = Aura;
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 parameter_types! {
     pub const ExistentialDeposit: u128 = 500;
-    pub const CreationFee: u128 = 0;
 }
 
 impl balances::Trait for Runtime {
     /// The type for recording an account's balance.
     type Balance = Balance;
-    /// What to do if an account is fully reaped from the system.
-    type OnReapAccount = System;
-    /// What to do if a new account is created.
-    type OnNewAccount = Indices;
     /// The ubiquitous event type.
     type Event = Event;
     type DustRemoval = ();
-    type TransferPayment = ();
     type ExistentialDeposit = ExistentialDeposit;
-    type CreationFee = CreationFee;
+    type AccountStore = System;
+    type WeightInfo = ();
 }
 
 parameter_types! {
-    pub const TransactionBaseFee: Balance = 0;
     pub const TransactionByteFee: Balance = 1;
 }
 
 impl transaction_payment::Trait for Runtime {
     type Currency = balances::Module<Runtime>;
     type OnTransactionPayment = ();
-    type TransactionBaseFee = TransactionBaseFee;
     type TransactionByteFee = TransactionByteFee;
-    type WeightToFee = ConvertInto;
+    type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
 }
 
 impl sudo::Trait for Runtime {
     type Event = Event;
-    type Proposal = Call;
+    type Call = Call;
 }
 
 /// Used for advanca runtime module
@@ -254,27 +284,28 @@ impl advanca_core::Trait for Runtime {
     type Currency = Balances;
 }
 
+// Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
         NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: system::{Module, Call, Storage, Config, Event},
-        Timestamp: timestamp::{Module, Call, Storage, Inherent},
-        Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
-        Grandpa: grandpa::{Module, Call, Storage, Config, Event},
-        Indices: indices,
-        Balances: balances,
-        TransactionPayment: transaction_payment::{Module, Storage},
-        Sudo: sudo,
-        AdvancaCore: advanca_core::{Module, Call, Storage, Event<T>},
+        System: system::{Module, Call, Config, Storage, Event<T>},
         RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
+        Timestamp: timestamp::{Module, Call, Storage, Inherent},
+        Aura: aura::{Module, Config<T>, Inherent},
+        Grandpa: grandpa::{Module, Call, Storage, Config, Event},
+        Balances: balances::{Module, Call, Storage, Config<T>, Event<T>},
+        TransactionPayment: transaction_payment::{Module, Storage},
+        Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
+        // Used for the advanca runtime module
+        AdvancaCore: advanca_core::{Module, Call, Storage, Event<T>},
     }
 );
 
 /// The address format for describing accounts.
-pub type Address = <Indices as StaticLookup>::Source;
+pub type Address = AccountId;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.
@@ -285,7 +316,8 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
-    system::CheckVersion<Runtime>,
+    system::CheckSpecVersion<Runtime>,
+    system::CheckTxVersion<Runtime>,
     system::CheckGenesis<Runtime>,
     system::CheckEra<Runtime>,
     system::CheckNonce<Runtime>,
@@ -347,8 +379,11 @@ impl_runtime_apis! {
     }
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-        fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
-            Executive::validate_transaction(tx)
+        fn validate_transaction(
+            source: TransactionSource,
+            tx: <Block as BlockT>::Extrinsic,
+        ) -> TransactionValidity {
+            Executive::validate_transaction(source, tx)
         }
     }
 
@@ -375,7 +410,7 @@ impl_runtime_apis! {
 
         fn decode_session_keys(
             encoded: Vec<u8>,
-        ) -> Option<Vec<(Vec<u8>, sp_core::crypto::KeyTypeId)>> {
+        ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
             opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
         }
     }
@@ -383,6 +418,26 @@ impl_runtime_apis! {
     impl fg_primitives::GrandpaApi<Block> for Runtime {
         fn grandpa_authorities() -> GrandpaAuthorityList {
             Grandpa::grandpa_authorities()
+        }
+
+        fn submit_report_equivocation_unsigned_extrinsic(
+            _equivocation_proof: fg_primitives::EquivocationProof<
+                <Block as BlockT>::Hash,
+                NumberFor<Block>,
+            >,
+            _key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+        ) -> Option<()> {
+            None
+        }
+
+        fn generate_key_ownership_proof(
+            _set_id: fg_primitives::SetId,
+            _authority_id: GrandpaId,
+        ) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+            // NOTE: this is the only implementation possible since we've
+            // defined our key owner proof type as a bottom type (i.e. a type
+            // with no values).
+            None
         }
     }
 }

@@ -20,7 +20,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use frame_support::traits::BalanceStatus;
 use frame_support::traits::{Currency, ReservableCurrency};
+
 use frame_support::{
     codec::{Decode, Encode},
     decl_error, decl_event, decl_module, decl_storage,
@@ -31,8 +33,11 @@ use smart_default::SmartDefault;
 use sp_api::HashT;
 use sp_runtime::RuntimeDebug;
 
+use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
-use system::ensure_signed;
+
+const PER_BLOCK_COST: u32 = 1_000_000;
+const PER_DAY_BLOCKS: u32 = 14_400;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -161,15 +166,15 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as AdvancaCore {
         /// Registered users
-        Users get(fn get_user): map hasher(blake2_256) T::AccountId => User<T::AccountId>;
+        Users get(fn get_user): map hasher(opaque_blake2_256) T::AccountId => User<T::AccountId>;
         /// Registered workers
-        Workers get(fn get_worker): map hasher(blake2_256) T::AccountId => Worker<T::AccountId>;
+        Workers get(fn get_worker): map hasher(opaque_blake2_256) T::AccountId => Worker<T::AccountId>;
 
         /// Saved tasks
         ///
         /// Note only the tasks in unscheduled or scheduled state are saved in this map.
         /// Any completed or aborted tasks are removed from chain to save space
-        Tasks get(fn get_task): map hasher(blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
+        Tasks get(fn get_task): map hasher(opaque_blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
 
         /// Unscheduled tasks
         ///
@@ -187,6 +192,7 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn register_worker(origin, deposit: BalanceOf<T>, enclave: Enclave<T::AccountId>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -200,6 +206,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn deregister_worker(origin) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -214,6 +221,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn register_user(origin, deposit: BalanceOf<T>, public_key: Vec<u8>) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -227,6 +235,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn deregister_user(origin) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -241,8 +250,19 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
+
+            // we'll reserve the amount for task creation here
+            let reserved_amount = if lease == 0 {
+                // keep at least 10 days worth of deposit
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(PER_DAY_BLOCKS) * BalanceOf::<T>::from(10)
+            } else {
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(lease as u32)
+            };
+
+            T::Currency::reserve(&owner, reserved_amount)?;
 
             let task_id = Self::task_id(&owner, <system::Module<T>>::account_nonce(&owner));
             Tasks::<T>::insert(task_id.clone(), Task{
@@ -256,6 +276,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -271,6 +292,7 @@ decl_module! {
         /// Updates a task
         ///
         /// Currently only updating TaskSpec is allowed.
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn update_task(origin, task_id: TaskId<T>, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -291,6 +313,7 @@ decl_module! {
         ///
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -317,6 +340,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn abort_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -335,6 +359,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn complete_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -342,18 +367,42 @@ decl_module! {
             ensure!(Tasks::<T>::contains_key(task_id.clone()), "task_id must exist");
             let task = Tasks::<T>::get(task_id.clone());
             //TODO: use pre-defined error
-            ensure!(task.worker == Some(worker), "only the worker can complete this task");
+            ensure!(task.worker == Some(worker.clone()), "only the worker can complete this task");
+
+            // get the task information
+            let task = Tasks::<T>::get(task_id.clone());
+
+            // here, we are recalculating the amount that is reserved for this task, maybe we
+            // should consider storing it somewhere
+            let lease = task.lease;
+            let reserved_amount = if lease == 0 {
+                // keep at least 10 days worth of deposit
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(PER_DAY_BLOCKS) * BalanceOf::<T>::from(10)
+            } else {
+                BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(lease as u32)
+            };
+
+            let blocks_alive: BalanceOf<T> = (task.worker_heartbeat_evidence.len() as u32).into();
+
+            // we multiply by 1000 to make the value larger for demo purpose
+            let task_fees: BalanceOf<T> = blocks_alive * PER_BLOCK_COST.into() * 1000.into();
+
+            T::Currency::repatriate_reserved(&task.owner, &worker, task_fees, BalanceStatus::Free)?;
 
             //Tasks::<T>::remove(task_id);
             Tasks::<T>::mutate(task_id.clone(), |t| {
                 t.status = TaskStatus::Done;
             });
 
+            // unreserve the remaining amount for this job
+            T::Currency::unreserve(&task.owner, reserved_amount - task_fees);
+
             Self::deposit_event(RawEvent::TaskCompleted(task_id));
             Ok(())
         }
 
         //TODO: TBD
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn progress_task(origin) -> DispatchResult {
             let _who = ensure_signed(origin)?;
 

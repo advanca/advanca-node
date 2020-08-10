@@ -39,22 +39,23 @@ fn registration() {
     new_test_ext().execute_with(|| {
         let deposit = 0;
         let user_account = 0x0;
+        let user_account_with_no_balance = 0x1000;
         let user_public_key: Vec<u8> = "user_public_key".into();
         let worker_account = 0x1;
         let enclave: Enclave<u64> = Default::default();
 
         assert_noop!(
-            AdvancaCore::register_user(Origin::NONE, deposit, user_public_key.clone()),
+            AdvancaCore::register_user(Origin::none(), deposit, user_public_key.clone()),
             DispatchError::BadOrigin
         );
         assert_noop!(
-            AdvancaCore::register_worker(Origin::NONE, deposit, enclave.clone()),
+            AdvancaCore::register_worker(Origin::none(), deposit, enclave.clone()),
             DispatchError::BadOrigin
         );
 
         assert_noop!(
             AdvancaCore::register_user(
-                Origin::signed(user_account),
+                Origin::signed(user_account_with_no_balance),
                 deposit + 1,
                 user_public_key.clone()
             ),
@@ -82,7 +83,11 @@ fn registration() {
             }
         );
         assert_eq!(
-            System::events().last().unwrap().event,
+            System::events()
+                .iter()
+                .last()
+                .expect("Should have an event")
+                .event,
             TestEvent::advanca_core(RawEvent::UserAdded(user_account.clone()))
         );
 
@@ -112,9 +117,16 @@ fn submit_task() {
         let account = 0x0;
         let lease = Default::default();
         let task_spec: TaskSpec<Privacy> = Default::default();
+        let signed_owner_task_pubkey: Vec<u8> = "owner_task_pubkey".into();
+        let worker_heartbeat_evidence: Vec<Vec<u8>> = Default::default();
         // make sure panics panic
         assert_noop!(
-            AdvancaCore::submit_task(Origin::NONE, lease, task_spec.clone()),
+            AdvancaCore::submit_task(
+                Origin::none(),
+                signed_owner_task_pubkey.to_owned(),
+                lease,
+                task_spec.clone()
+            ),
             DispatchError::BadOrigin
         );
 
@@ -124,6 +136,7 @@ fn submit_task() {
 
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone(),
         ));
@@ -137,6 +150,7 @@ fn submit_task() {
 
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone(),
         ));
@@ -148,8 +162,8 @@ fn submit_task() {
         );
 
         assert_eq!(AdvancaCore::unscheduled_tasks(), vec![task_id1, task_id2]);
-        assert_eq!(Tasks::<Test>::contains_key(task_id1), true);
-        assert_eq!(Tasks::<Test>::contains_key(task_id2), true);
+        assert_eq!(Tasks::<TestRuntime>::contains_key(task_id1), true);
+        assert_eq!(Tasks::<TestRuntime>::contains_key(task_id2), true);
 
         assert_eq!(
             AdvancaCore::get_task(task_id1),
@@ -157,10 +171,13 @@ fn submit_task() {
                 task_id: task_id1,
                 status: TaskStatus::Unscheduled,
                 owner: account,
+                signed_owner_task_pubkey: signed_owner_task_pubkey.clone(),
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
+                signed_worker_task_pubkey: None,
                 worker_url: None,
+                worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
         );
         assert_eq!(
@@ -169,10 +186,13 @@ fn submit_task() {
                 task_id: task_id2,
                 status: TaskStatus::Unscheduled,
                 owner: account,
+                signed_owner_task_pubkey: signed_owner_task_pubkey,
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
+                signed_worker_task_pubkey: None,
                 worker_url: None,
+                worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
         );
     });
@@ -185,21 +205,33 @@ fn accept_task() {
         let worker_account = 0x1;
         let fake_task_id = Default::default();
         let url: Vec<u8> = "url_in_ciphertext".into();
+        let signed_owner_task_pubkey: Vec<u8> = "signed_owner_task_pubkey".into();
+        let signed_eph_pubkey: Vec<u8> = "signed_eph_pubkey".into();
 
         // ensure origin is checked
         assert_noop!(
-            AdvancaCore::accept_task(Origin::NONE, fake_task_id, url.clone()),
+            AdvancaCore::accept_task(
+                Origin::none(),
+                fake_task_id,
+                signed_eph_pubkey.clone(),
+                url.clone()
+            ),
             DispatchError::BadOrigin
         );
 
         // ensure task_id check is working
         assert_noop!(
-            AdvancaCore::accept_task(Origin::signed(worker_account), fake_task_id, url.clone()),
+            AdvancaCore::accept_task(
+                Origin::signed(worker_account),
+                fake_task_id,
+                signed_eph_pubkey.clone(),
+                url.clone()
+            ),
             "task_id must exist"
         );
 
         let task_id = Default::default();
-        Tasks::<Test>::insert(
+        Tasks::<TestRuntime>::insert(
             &task_id,
             Task {
                 status: TaskStatus::Scheduled,
@@ -208,7 +240,12 @@ fn accept_task() {
         );
 
         assert_noop!(
-            AdvancaCore::accept_task(Origin::signed(worker_account), task_id, url.clone()),
+            AdvancaCore::accept_task(
+                Origin::signed(worker_account),
+                task_id,
+                signed_eph_pubkey.clone(),
+                url.clone()
+            ),
             "task must not be scheduled"
         );
 
@@ -217,6 +254,7 @@ fn accept_task() {
         // check task is scheduled
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(user_account),
+            signed_owner_task_pubkey,
             lease,
             task_spec,
         ));
@@ -225,7 +263,12 @@ fn accept_task() {
 
         // ensure the worker is registered
         assert_noop!(
-            AdvancaCore::accept_task(Origin::signed(worker_account), task_id, url.clone()),
+            AdvancaCore::accept_task(
+                Origin::signed(worker_account),
+                task_id,
+                signed_eph_pubkey.clone(),
+                url.clone()
+            ),
             AdvancaCoreError::NotFound
         );
 
@@ -240,6 +283,7 @@ fn accept_task() {
         assert_ok!(AdvancaCore::accept_task(
             Origin::signed(worker_account),
             task_id.clone(),
+            signed_eph_pubkey.clone(),
             url.clone()
         ));
 
@@ -268,16 +312,19 @@ fn update_task() {
         let fake_account = 0x1;
         let fake_task_id = AdvancaCore::task_id(&fake_account, 0);
         let task_spec: TaskSpec<Privacy> = Default::default();
+        let signed_owner_task_pubkey: Vec<u8> = "signed_owner_task_pubkey".into();
+        let worker_heartbeat_evidence = Default::default();
 
         // make sure panics panic
         assert_noop!(
-            AdvancaCore::update_task(Origin::NONE, fake_task_id, task_spec.clone()),
+            AdvancaCore::update_task(Origin::none(), fake_task_id, task_spec.clone()),
             DispatchError::BadOrigin
         );
 
         let lease = Default::default();
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone()
         ));
@@ -305,10 +352,13 @@ fn update_task() {
                 task_id: task_id,
                 status: TaskStatus::Unscheduled,
                 owner: account,
+                signed_owner_task_pubkey: signed_owner_task_pubkey,
                 worker: None,
+                signed_worker_task_pubkey: None,
                 lease: lease,
                 task_spec: task_spec_update,
                 worker_url: None,
+                worker_heartbeat_evidence
             }
         )
     })
@@ -322,10 +372,11 @@ fn abort_task() {
         let fake_account = 0x1;
         let fake_task_id = AdvancaCore::task_id(&fake_account, 0);
         let default = Default::default();
+        let signed_owner_task_pubkey = Default::default();
 
         // make sure panics panic
         assert_noop!(
-            AdvancaCore::abort_task(Origin::NONE, default),
+            AdvancaCore::abort_task(Origin::none(), default),
             DispatchError::BadOrigin
         );
 
@@ -333,6 +384,7 @@ fn abort_task() {
         let task_spec = Default::default();
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey,
             lease,
             task_spec,
         ));
@@ -346,10 +398,11 @@ fn abort_task() {
         );
 
         assert_ok!(AdvancaCore::abort_task(Origin::signed(account), task_id));
-        assert_eq!(Tasks::<Test>::contains_key(task_id), false);
+        assert_eq!(Tasks::<TestRuntime>::contains_key(task_id), true);
+        assert_eq!(Tasks::<TestRuntime>::get(task_id).status, TaskStatus::Done);
 
         assert_eq!(
-            System::events().last().unwrap().event,
+            System::events().last().expect("should have an event").event,
             TestEvent::advanca_core(RawEvent::TaskAborted(task_id))
         );
     })
