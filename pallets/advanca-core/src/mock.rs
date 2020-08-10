@@ -108,9 +108,15 @@ pub type System = system::Module<TestRuntime>;
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let t = system::GenesisConfig::default()
+    let mut t = system::GenesisConfig::default()
         .build_storage::<TestRuntime>()
         .unwrap();
+    // pre-fund the account 0x0 with initial balance.
+    balances::GenesisConfig::<TestRuntime> {
+        balances: vec![(0, 1000_000_000_000)],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     let mut ext: sp_io::TestExternalities = t.into();
     // NOTE: events are not emitted at genesis block, so proceed the block by 1.

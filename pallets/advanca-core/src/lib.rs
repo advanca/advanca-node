@@ -20,8 +20,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::traits::{Currency, ReservableCurrency};
 use frame_support::traits::BalanceStatus;
+use frame_support::traits::{Currency, ReservableCurrency};
 
 use frame_support::{
     codec::{Decode, Encode},
@@ -37,7 +37,7 @@ use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 
 const PER_BLOCK_COST: u32 = 1_000_000;
-const PER_DAY_BLOCKS: u32 = 14_400; 
+const PER_DAY_BLOCKS: u32 = 14_400;
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;

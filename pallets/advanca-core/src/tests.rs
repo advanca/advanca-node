@@ -39,6 +39,7 @@ fn registration() {
     new_test_ext().execute_with(|| {
         let deposit = 0;
         let user_account = 0x0;
+        let user_account_with_no_balance = 0x1000;
         let user_public_key: Vec<u8> = "user_public_key".into();
         let worker_account = 0x1;
         let enclave: Enclave<u64> = Default::default();
@@ -54,7 +55,7 @@ fn registration() {
 
         assert_noop!(
             AdvancaCore::register_user(
-                Origin::signed(user_account),
+                Origin::signed(user_account_with_no_balance),
                 deposit + 1,
                 user_public_key.clone()
             ),
