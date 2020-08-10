@@ -9,101 +9,30 @@ version = '0.2.0'
 [[bin]]
 name = 'advanca-node'
 
-[build-dependencies]
-vergen = '3.0.4'
-
-[build-dependencies.build-script-utils]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-build-script-utils'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
 [dependencies]
-futures = '0.3.1'
-log = '0.4.8'
-structopt = '0.3.8'
+futures                = '0.3.1'
+log                    = '0.4.8'
+structopt              = '0.3.8'
 
-[dependencies.grandpa]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'sc-finality-grandpa'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
+grandpa                = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", package = "sc-finality-grandpa" }
 
-[dependencies.grandpa-primitives]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'sp-finality-grandpa'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+sc-basic-authorship    = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-cli                 = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-consensus-aura      = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-executor            = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-network             = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-service             = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sc-transaction-pool    = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
 
-[dependencies.advanca-runtime]
-path = '../runtime'
-version = '0.2.0'
+sp-consensus           = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-core                = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-inherents           = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-runtime             = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-transaction-pool    = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
 
-[dependencies.sc-basic-authorship]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
+advanca-runtime        = { path = "../runtime" }
 
-[dependencies.sc-cli]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8.0'
 
-[dependencies.sc-client]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sc-consensus-aura]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sc-executor]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sc-network]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sc-service]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sc-transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.sp-consensus]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sp-consensus-aura]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '0.8'
-
-[dependencies.sp-core]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.sp-inherents]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.sp-runtime]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.sp-transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+[build-dependencies]
+vergen                 = '3.0.4'
+build-script-utils     = { tag = "v2.0.0-rc5", git = "http://github.com/paritytech/substrate.git", package = "substrate-build-script-utils" }

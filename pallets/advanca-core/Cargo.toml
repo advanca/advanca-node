@@ -5,82 +5,33 @@ license = 'GPL-3.0'
 name = 'advanca-core'
 version = '0.2.0'
 
-[dev-dependencies.sp-core]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dev-dependencies.sp-io]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dev-dependencies.sp-runtime]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dev-dependencies.balances]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'pallet-balances'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
 [features]
 default = ['std']
 std = [
     'codec/std',
     'frame-support/std',
     'safe-mix/std',
-    'system/std',
+    'frame-system/std',
     'sp-runtime/std',
     'sp-std/std',
     'sp-api/std',
 ]
-[dependencies.codec]
-default-features = false
-features = ['derive']
-package = 'parity-scale-codec'
-version = '1.0.0'
 
-[dependencies.frame-support]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+[dependencies]
+codec              = { version = "1.0.0", default-features = false, package = "parity-scale-codec" }
+smart-default      = { version = "0.6.0", default-features = false }
+safe-mix           = { version = "1.0.0", default-features = false }
 
-[dependencies.safe-mix]
-default-features = false
-version = '1.0.0'
+frame-support      = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", default-features = false }
+frame-system       = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
-[dependencies.system]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'frame-system'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+sp-runtime         = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", default-features = false }
+sp-std             = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", default-features = false }
+sp-api             = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", default-features = false }
 
-[dependencies.sp-runtime]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
+[dev-dependencies]
+sp-core            = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-io              = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
+sp-runtime         = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git" }
 
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.sp-api]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-rev = '00a400f82539e2f78e8ddbcd98aea512c87c5f3c'
-version = '2.0.0'
-
-[dependencies.smart-default]
-default-features = false
-version = "0.6.0"
+balances           = { tag = "v2.0.0-rc5", git = "https://github.com/paritytech/substrate.git", package = "pallet-balances" }

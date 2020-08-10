@@ -36,18 +36,18 @@ use sp_runtime::RuntimeDebug;
 
 // This version of substrate doesn't have BalanceStatus
 // Include this after update to newer substrate
-// use frame_support::traits::BalanceStatus;
+use frame_support::traits::BalanceStatus;
 
 use sp_std::prelude::*;
-use system::ensure_signed;
+use frame_system::ensure_signed;
 
 const PER_BLOCK_COST: u32 = 1_000_000;
 const PER_DAY_BLOCKS: u32 = 14_400;
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
-pub type TaskId<T> = <T as system::Trait>::Hash;
-pub type Index<T> = <T as system::Trait>::Index;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+pub type TaskId<T> = <T as frame_system::Trait>::Hash;
+pub type Index<T> = <T as frame_system::Trait>::Index;
 
 //TODO: check if there's better type alias defined in substrate
 /// Duration of the task. 0 means unlimited.
@@ -57,9 +57,9 @@ pub type Duration = u64;
 pub type Ciphertext = Vec<u8>;
 
 /// The module's configuration trait.
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     /// The currency to be handled in this module
     type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
@@ -173,15 +173,15 @@ decl_error! {
 decl_storage! {
     trait Store for Module<T: Trait> as AdvancaCore {
         /// Registered users
-        Users get(fn get_user): map hasher(blake2_256) T::AccountId => User<T::AccountId>;
+        Users get(fn get_user): map hasher(opaque_blake2_256) T::AccountId => User<T::AccountId>;
         /// Registered workers
-        Workers get(fn get_worker): map hasher(blake2_256) T::AccountId => Worker<T::AccountId>;
+        Workers get(fn get_worker): map hasher(opaque_blake2_256) T::AccountId => Worker<T::AccountId>;
 
         /// Saved tasks
         ///
         /// Note only the tasks in unscheduled or scheduled state are saved in this map.
         /// Any completed or aborted tasks are removed from chain to save space
-        Tasks get(fn get_task): map hasher(blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
+        Tasks get(fn get_task): map hasher(opaque_blake2_256) TaskId<T> => Task<TaskId<T>, T::AccountId, Duration, TaskSpec<Privacy>, TaskStatus, Ciphertext>;
 
         /// Unscheduled tasks
         ///
@@ -199,6 +199,7 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
+        #[weight = 1000]
         pub fn register_worker(origin, deposit: BalanceOf<T>, enclave: Enclave<T::AccountId>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -212,6 +213,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn deregister_worker(origin) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -226,6 +228,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn register_user(origin, deposit: BalanceOf<T>, public_key: Vec<u8>) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -239,6 +242,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn deregister_user(origin) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
@@ -253,6 +257,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -266,7 +271,7 @@ decl_module! {
 
             T::Currency::reserve(&owner, reserved_amount)?;
 
-            let task_id = Self::task_id(&owner, <system::Module<T>>::account_nonce(&owner));
+            let task_id = Self::task_id(&owner, <frame_system::Module<T>>::account_nonce(&owner));
             Tasks::<T>::insert(task_id.clone(), Task{
                 signed_owner_task_pubkey,
                 owner, task_id, lease, task_spec, ..Default::default()
@@ -278,6 +283,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -293,6 +299,7 @@ decl_module! {
         /// Updates a task
         ///
         /// Currently only updating TaskSpec is allowed.
+        #[weight = 1000]
         pub fn update_task(origin, task_id: TaskId<T>, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -314,6 +321,7 @@ decl_module! {
         ///
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
+        #[weight = 1000]
         pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -340,6 +348,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn abort_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
@@ -358,6 +367,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 1000]
         pub fn complete_task(origin, task_id: TaskId<T>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
@@ -387,8 +397,8 @@ decl_module! {
 
             // current version of repatriate_reserved only have 3 arguments
             // the movement is from reserved -> free
-            // T::Currency::repatriate_reserved(&task.owner, &worker, task_fees, BalanceStatus::Free)?;
-            T::Currency::repatriate_reserved(&task.owner, &worker, task_fees)?;
+            T::Currency::repatriate_reserved(&task.owner, &worker, task_fees, BalanceStatus::Free)?;
+            //T::Currency::repatriate_reserved(&task.owner, &worker, task_fees)?;
 
             //Tasks::<T>::remove(task_id);
             Tasks::<T>::mutate(task_id.clone(), |t| {
@@ -403,6 +413,7 @@ decl_module! {
         }
 
         //TODO: TBD
+        #[weight = 1000]
         pub fn progress_task(origin) -> DispatchResult {
             let _who = ensure_signed(origin)?;
 
@@ -424,7 +435,7 @@ impl<T: Trait> Module<T> {
 decl_event!(
     pub enum Event<T>
     where
-        AccountId = <T as system::Trait>::AccountId,
+        AccountId = <T as frame_system::Trait>::AccountId,
         TaskId = TaskId<T>,
     {
         UserAdded(AccountId),
