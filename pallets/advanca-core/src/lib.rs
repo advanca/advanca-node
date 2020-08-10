@@ -261,6 +261,7 @@ decl_module! {
             Ok(())
         }
 
+        #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
