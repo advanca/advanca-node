@@ -1,4 +1,6 @@
 {
+    "Address": "AccountId",
+    "LookupSource": "AccountId",
     "TaskId": "Hash",
     "Duration": "u64",
     "Ciphertext": "Vec<u8>",
