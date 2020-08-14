@@ -16,6 +16,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_std::prelude::*;
+
 use codec::{Encode, Decode};
 use smart_default::SmartDefault;
 use sp_runtime::{
@@ -48,7 +50,7 @@ pub type Balance = u128;
 pub type Index = u32;
 
 /// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
+pub type Hash = primitive_types::H256;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;

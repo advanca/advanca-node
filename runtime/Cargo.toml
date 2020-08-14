@@ -6,7 +6,7 @@ name = 'advanca-runtime'
 version = '0.3.0'
 
 [dependencies]
-advanca-node-primitives = { path = "../advanca-node-primitives/" }
+advanca-node-primitives = { path = "../advanca-node-primitives/", default-features = false }
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -39,6 +39,7 @@ std = [
     'timestamp/std',
     'transaction-payment/std',
     'advanca-core/std',
+    'advanca-node-primitives/std',
 ]
 
 [build-dependencies.wasm-builder-runner]
