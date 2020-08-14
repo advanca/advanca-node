@@ -24,17 +24,19 @@ use frame_support::traits::BalanceStatus;
 use frame_support::traits::{Currency, ReservableCurrency};
 
 use frame_support::{
-    codec::{Decode, Encode},
+    codec::{Encode},
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
     ensure,
 };
-use smart_default::SmartDefault;
+// use smart_default::SmartDefault;
+// use sp_runtime::RuntimeDebug;
 use sp_api::HashT;
-use sp_runtime::RuntimeDebug;
 
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
+
+pub use advanca_node_primitives::*;
 
 const PER_BLOCK_COST: u32 = 1_000_000;
 const PER_DAY_BLOCKS: u32 = 14_400;
@@ -44,13 +46,6 @@ pub type BalanceOf<T> =
 pub type TaskId<T> = <T as system::Trait>::Hash;
 pub type Index<T> = <T as system::Trait>::Index;
 
-//TODO: check if there's better type alias defined in substrate
-/// Duration of the task. 0 means unlimited.
-pub type Duration = u64;
-
-/// The encrypted bytes
-pub type Ciphertext = Vec<u8>;
-
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
     /// The overarching event type.
@@ -58,99 +53,6 @@ pub trait Trait: system::Trait {
 
     /// The currency to be handled in this module
     type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-}
-
-#[derive(Encode, Decode, Default, RuntimeDebug, PartialEq, Eq)]
-/// The public information about a user
-pub struct User<AccountId> {
-    /// User account on chain
-    pub account_id: AccountId,
-    /// User public key for encryption
-    pub public_key: Vec<u8>,
-}
-
-#[derive(Encode, Decode, Default, RuntimeDebug, PartialEq, Eq, Clone)]
-/// The public information about an Enclave
-pub struct Enclave<AccountId> {
-    /// Enclave account on chain
-    pub account_id: AccountId,
-    /// Enclave public key for encryption
-    pub public_key: Vec<u8>,
-    /// Enclave attestation information which certifies all the other fields
-    pub attestation: Vec<u8>,
-}
-
-#[derive(Encode, Decode, Default, RuntimeDebug, PartialEq, Eq)]
-/// The public information about a worker and its enclave
-pub struct Worker<AccountId> {
-    /// Worker account on chain
-    pub account_id: AccountId,
-    /// Enclave that the worker is running
-    pub enclave: Enclave<AccountId>,
-}
-
-#[derive(Encode, Decode, SmartDefault, RuntimeDebug, PartialEq, Eq, Clone)]
-/// The status of a task managed on chain
-pub enum TaskStatus {
-    #[default]
-    /// The task is already submitted but not taken by any workers
-    Unscheduled,
-    /// The task is taken by a worker
-    Scheduled,
-    /// The task is completed or aborted
-    Done,
-}
-
-#[derive(Encode, Decode, SmartDefault, RuntimeDebug, PartialEq, Eq, Clone)]
-/// The possible privacy levels
-pub enum Privacy {
-    #[default]
-    /// Public
-    None,
-    /// Only encryption used
-    Encryption,
-    /// Encryption and Square-Root ORAM
-    SqrtOram,
-    /// Encryption and Path ORAM
-    PathOram,
-    /// Encryption and Oblivous P2P
-    OblivP2p,
-}
-
-#[derive(Encode, Decode, Default, RuntimeDebug, PartialEq, Eq, Clone)]
-/// The task specification. //TODO: more details
-pub struct TaskSpec<Privacy> {
-    /// The specification of the pod, which is the same concept in Kubernetes.
-    pub pod_spec: Vec<u8>, //TODO: add more details
-    /// The specification of the storage volume
-    pub volume_spec: Vec<u8>, //TODO: add more details
-    /// The privacy level
-    pub privacy: Privacy,
-}
-
-#[derive(Encode, Decode, Default, RuntimeDebug, Clone, PartialEq, Eq)]
-/// Task information
-pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
-    /// A unversial task ID that is unique for every submission by every user.
-    pub task_id: TaskId,
-    /// The current task status
-    pub status: TaskStatus,
-    /// The user who submitted the task
-    pub owner: AccountId,
-    /// The user's signed task key
-    pub signed_owner_task_pubkey: Vec<u8>,
-    /// The owner-determined task duration. Default to 0 for unlimited time.
-    pub lease: Duration,
-    /// The detailed specification of a task
-    pub task_spec: TaskSpec,
-    /// The worker who accepted the task. It may be none at the beginning.
-    pub worker: Option<AccountId>,
-    /// The worker's ephemeral key for the particular task signed using its registered key
-    pub signed_worker_task_pubkey: Option<Vec<u8>>,
-    /// The worker's service url saved in ciphertext encrypted by owner's public key
-    pub worker_url: Option<Ciphertext>,
-    /// Worker's heartbeat evidence
-    pub worker_heartbeat_evidence: Vec<Vec<u8>>,
 }
 
 // Error from the module
