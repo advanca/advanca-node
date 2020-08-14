@@ -35,6 +35,7 @@ checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 name = "advanca-core"
 version = "0.3.0"
 dependencies = [
+ "advanca-node-primitives",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -77,10 +78,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "advanca-node-primitives"
+version = "0.3.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "smart-default",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "advanca-runtime"
 version = "0.3.0"
 dependencies = [
  "advanca-core",
+ "advanca-node-primitives",
  "frame-executive",
  "frame-support",
  "frame-system",

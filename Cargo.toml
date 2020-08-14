@@ -3,6 +3,7 @@ members = [
     'node',
     'pallets/advanca-core',
     'runtime',
+    'advanca-node-primitives',
 ]
 [profile.release]
 panic = 'unwind'
