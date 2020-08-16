@@ -26,9 +26,7 @@ use frame_support::traits::BalanceStatus;
 use frame_support::traits::{Currency, ReservableCurrency};
 
 use frame_support::{
-    codec::{Encode},
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
+    codec::Encode, decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult,
     ensure,
 };
 // use smart_default::SmartDefault;

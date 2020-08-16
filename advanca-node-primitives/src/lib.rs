@@ -18,13 +18,13 @@
 
 use sp_std::prelude::*;
 
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use smart_default::SmartDefault;
 use sp_runtime::{
-    generic, RuntimeDebug, MultiSignature,
+    generic,
     traits::{IdentifyAccount, Verify},
+    MultiSignature, RuntimeDebug,
 };
-
 
 /// Duration of the task. 0 means unlimited.
 pub type Duration = u64;
