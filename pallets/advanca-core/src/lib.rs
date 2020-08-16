@@ -20,6 +20,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use advanca_crypto_types::*;
+
 use frame_support::traits::BalanceStatus;
 use frame_support::traits::{Currency, ReservableCurrency};
 
@@ -186,6 +188,7 @@ decl_module! {
             let task = Tasks::<T>::get(task_id.clone());
             ensure!(task.worker == Some(worker), "only worker can update this task");
             for evidence in evidences {
+                let timestamp_signed_msg: Secp256r1SignedMsg = serde_json::from_slice(&evidence).unwrap();
                 Tasks::<T>::mutate(task_id.clone(), |t| t.worker_heartbeat_evidence.push(evidence));
             }
             Ok(())
