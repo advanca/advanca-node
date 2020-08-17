@@ -127,14 +127,14 @@ decl_module! {
         }
 
         #[weight = 0] //FIXME: use meaningful weight
-        pub fn register_user(origin, deposit: BalanceOf<T>, public_key: Vec<u8>) -> DispatchResult {
+        pub fn register_user(origin, deposit: BalanceOf<T>, public_keys: PublicKeys) -> DispatchResult {
             let user = ensure_signed(origin)?;
 
             //TODO: use pre-defined error
             ensure!(!<Users<T>>::contains_key(&user), "The user is already registered");
 
             T::Currency::reserve(&user, deposit)?;
-            <Users<T>>::insert(&user, User{account_id: user.clone(), public_key});
+            <Users<T>>::insert(&user, User{account_id: user.clone(), public_keys});
 
             Self::deposit_event(RawEvent::UserAdded(user.clone()));
             Ok(())
@@ -156,7 +156,7 @@ decl_module! {
         }
 
         #[weight = 0] //FIXME: use meaningful weight
-        pub fn submit_task(origin, signed_owner_task_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
+        pub fn submit_task(origin, signed_owner_task_secp256r1_pubkey: Vec<u8>, signed_owner_task_sr25519_pubkey: Vec<u8>, lease: Duration, task_spec: TaskSpec<Privacy>) -> DispatchResult {
             let owner = ensure_signed(origin)?;
 
             // we'll reserve the amount for task creation here
@@ -171,7 +171,7 @@ decl_module! {
 
             let task_id = Self::task_id(&owner, <system::Module<T>>::account_nonce(&owner));
             Tasks::<T>::insert(task_id.clone(), Task{
-                signed_owner_task_pubkey,
+                signed_owner_task_secp256r1_pubkey, signed_owner_task_sr25519_pubkey,
                 owner, task_id, lease, task_spec, ..Default::default()
             });
 
@@ -223,7 +223,7 @@ decl_module! {
         /// `task_id`: Selects whichs task to accept
         /// `url`: The worker service url in ciphertext (only viewable by task owner)
         #[weight = 0] //FIXME: use meaningful weight
-        pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
+        pub fn accept_task(origin, task_id: TaskId<T>, signed_eph_pubkey: Vec<u8>, signed_sr25519_pubkey: Vec<u8>, url: Ciphertext) -> DispatchResult {
             let worker = ensure_signed(origin)?;
 
             //TODO: use pre-defined error
@@ -238,7 +238,8 @@ decl_module! {
             Tasks::<T>::mutate(task_id.clone(), |t| {
                 t.status = TaskStatus::Scheduled;
                 t.worker = Some(worker);
-                t.signed_worker_task_pubkey = Some(signed_eph_pubkey);
+                t.signed_enclave_task_secp256r1_pubkey = Some(signed_eph_pubkey);
+                t.signed_enclave_task_sr25519_pubkey = Some(signed_sr25519_pubkey);
                 t.worker_url = Some(url);
             });
 
