@@ -63,8 +63,8 @@ pub type Ciphertext = Vec<u8>;
 pub struct User<AccountId> {
     /// User account on chain
     pub account_id: AccountId,
-    /// User public key for encryption
-    pub public_key: Vec<u8>,
+    /// User's public keys
+    pub public_keys: PublicKeys,
 }
 
 #[derive(Encode, Decode, Default, RuntimeDebug, PartialEq, Eq, Clone)]
@@ -72,8 +72,8 @@ pub struct User<AccountId> {
 pub struct Enclave<AccountId> {
     /// Enclave account on chain
     pub account_id: AccountId,
-    /// Enclave public key for encryption
-    pub public_key: Vec<u8>,
+    /// Enclave's public keys
+    pub public_keys: PublicKeys,
     /// Enclave attestation information which certifies all the other fields
     pub attestation: Vec<u8>,
 }
@@ -127,6 +127,14 @@ pub struct TaskSpec<Privacy> {
 }
 
 #[derive(Encode, Decode, Default, RuntimeDebug, Clone, PartialEq, Eq)]
+pub struct PublicKeys {
+    /// secp256r1 public key
+    pub secp256r1_public_key: Vec<u8>,
+    /// sr25519 public key
+    pub sr25519_public_key: Vec<u8>,
+}
+
+#[derive(Encode, Decode, Default, RuntimeDebug, Clone, PartialEq, Eq)]
 /// Task information
 pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     /// A unversial task ID that is unique for every submission by every user.
@@ -136,7 +144,9 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     /// The user who submitted the task
     pub owner: AccountId,
     /// The user's signed task key
-    pub signed_owner_task_pubkey: Vec<u8>,
+    pub signed_owner_task_secp256r1_pubkey: Vec<u8>,
+    /// The user's signed task key
+    pub signed_owner_task_sr25519_pubkey: Vec<u8>,
     /// The owner-determined task duration. Default to 0 for unlimited time.
     pub lease: Duration,
     /// The detailed specification of a task
@@ -144,7 +154,9 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     /// The worker who accepted the task. It may be none at the beginning.
     pub worker: Option<AccountId>,
     /// The worker's ephemeral key for the particular task signed using its registered key
-    pub signed_worker_task_pubkey: Option<Vec<u8>>,
+    pub signed_enclave_task_secp256r1_pubkey: Option<Vec<u8>>,
+    /// The worker's ephemeral key for the particular task signed using its registered key
+    pub signed_enclave_task_sr25519_pubkey: Option<Vec<u8>>,
     /// The worker's service url saved in ciphertext encrypted by owner's public key
     pub worker_url: Option<Ciphertext>,
     /// Worker's heartbeat evidence

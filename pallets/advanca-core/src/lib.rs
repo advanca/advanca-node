@@ -36,6 +36,8 @@ use sp_api::HashT;
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 
+use frame_support::debug;
+
 pub use advanca_node_primitives::*;
 
 const PER_BLOCK_COST: u32 = 1_000_000;
@@ -45,6 +47,7 @@ pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 pub type TaskId<T> = <T as system::Trait>::Hash;
 pub type Index<T> = <T as system::Trait>::Index;
+
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -180,6 +183,7 @@ decl_module! {
 
         #[weight = 0] //FIXME: use meaningful weight
         pub fn submit_task_evidence(origin, task_id: TaskId<T>, evidences: Vec<Vec<u8>>) -> DispatchResult {
+            debug::RuntimeLogger::init();
             let worker = ensure_signed(origin)?;
 
             ensure!(Tasks::<T>::contains_key(task_id.clone()), "task_id must exist");
@@ -187,6 +191,8 @@ decl_module! {
             ensure!(task.worker == Some(worker), "only worker can update this task");
             for evidence in evidences {
                 let timestamp_signed_msg: Secp256r1SignedMsg = serde_json::from_slice(&evidence).unwrap();
+                debug::info!("timestamp: {:?}", timestamp_signed_msg);
+                // sp_runtime::print(format!("{:?}", timestamp_signed_msg).as_str());
                 Tasks::<T>::mutate(task_id.clone(), |t| t.worker_heartbeat_evidence.push(evidence));
             }
             Ok(())
