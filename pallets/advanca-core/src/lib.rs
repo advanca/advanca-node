@@ -40,8 +40,36 @@ use frame_support::debug;
 
 pub use advanca_node_primitives::*;
 
+use schnorrkel;
+
 const PER_BLOCK_COST: u32 = 1_000_000;
 const PER_DAY_BLOCKS: u32 = 14_400;
+
+const SIGNING_CONTEXT: &[u8] = b"advanca-sign";
+
+// Copied the sr25519 verification stuff here
+pub fn sr25519_verify_msg(
+    pubkey: &Sr25519PublicKey,
+    signed_msg: &Sr25519SignedMsg,
+) -> bool {
+    sr25519_verify_signature(pubkey, &signed_msg.msg, &signed_msg.signature)
+}
+
+pub fn sr25519_verify_signature(
+    pubkey: &Sr25519PublicKey,
+    msg: &[u8],
+    signature: &Sr25519Signature,
+) -> bool {
+    let context = schnorrkel::signing_context(SIGNING_CONTEXT);
+    let schnorrkel_pubkey = pubkey.to_schnorrkel_public();
+    let schnorrkel_signature = signature.to_schnorrkel_signature();
+    schnorrkel_pubkey
+        .verify(context.bytes(msg), &schnorrkel_signature)
+        .is_ok()
+}
+
+
+
 
 pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -190,9 +218,6 @@ decl_module! {
             let task = Tasks::<T>::get(task_id.clone());
             ensure!(task.worker == Some(worker), "only worker can update this task");
             for evidence in evidences {
-                let timestamp_signed_msg: Secp256r1SignedMsg = serde_json::from_slice(&evidence).unwrap();
-                debug::info!("timestamp: {:?}", timestamp_signed_msg);
-                // sp_runtime::print(format!("{:?}", timestamp_signed_msg).as_str());
                 Tasks::<T>::mutate(task_id.clone(), |t| t.worker_heartbeat_evidence.push(evidence));
             }
             Ok(())
@@ -292,7 +317,25 @@ decl_module! {
                 BalanceOf::<T>::from(PER_BLOCK_COST) * BalanceOf::<T>::from(lease as u32)
             };
 
-            let blocks_alive: BalanceOf<T> = (task.worker_heartbeat_evidence.len() as u32).into();
+            // obtain the task key for the enclave
+            let signed_msg_bytes = task.signed_enclave_task_sr25519_pubkey.expect("signed_enclave_task_sr25519_pubkey expected!");
+            let signed_enclave_task_sr25519_pubkey : Sr25519SignedMsg = serde_json::from_slice(&signed_msg_bytes).expect("signed_sr25519_pubkey: Sr25519SignedMsg");
+            let enclave_task_sr25519_pubkey : Sr25519PublicKey = serde_json::from_slice(&signed_enclave_task_sr25519_pubkey.msg).expect("enclave_task_sr25519_pubkey: Sr25519PublicKey");
+            let mut blocks_alive: BalanceOf<T> = 0.into();
+            for evidence in task.worker_heartbeat_evidence {
+                let timestamp_signed_msg: Secp256r1SignedMsg = serde_json::from_slice(&evidence).expect("timestamp_signed_msg: Secp256r1SignedMsg");
+                let aas_timestamp : AasTimestamp = serde_json::from_slice(&timestamp_signed_msg.msg).expect("aas_timestamp: AasTimestamp");
+                let signed_evidence : Sr25519SignedMsg = serde_json::from_slice(&aas_timestamp.data).expect("signed_evidence: Sr25519SignedMsg");
+                // verify the signed message
+                let verified = sr25519_verify_msg(&enclave_task_sr25519_pubkey, &signed_evidence);
+                let alive_evidence : AliveEvidence = serde_json::from_slice(&signed_evidence.msg).expect("decode AliveEvidence...");
+
+                debug::info!("verified: {:?} - {:?}", hex::encode(&alive_evidence.block_hash), verified);
+                if verified {
+                    blocks_alive += 1.into();
+                }
+            }
+            debug::info!("total verified: {:?}", blocks_alive);
 
             // we multiply by 1000 to make the value larger for demo purpose
             let task_fees: BalanceOf<T> = blocks_alive * PER_BLOCK_COST.into() * 1000.into();
