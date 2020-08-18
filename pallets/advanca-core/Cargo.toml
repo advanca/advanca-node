@@ -8,7 +8,7 @@ version = '0.3.0'
 [dependencies]
 advanca-node-primitives = { path = "../../advanca-node-primitives/", default-features = false }
 #advanca-crypto-types    = { path = "../../../../advanca-sgx-helper/advanca-crypto-types", default-features = false, features = ["substrate"] }
-advanca-crypto-types    = { rev = "e3e6886c9d0e5fd9b673c0365012bd861edc0e39", git = "https://github.com/advanca/advanca-sgx-helper.git", default-features = false, features = ["substrate"] }
+advanca-crypto-types    = { rev = "a1ccddb03cac0928ab5cffd672a3a102574df761", git = "https://github.com/advanca/advanca-sgx-helper.git", default-features = false, features = ["substrate"] }
 serde_json              = { rev = "dfa96aba61cb3ea6751141079ecb144a00ef5e4a", git = "https://github.com/advanca/json.git", version = "1", default-features = false, features = ["alloc"] }
 schnorrkel              = { version = "0.9.1", default-features = false }
 hex                     = { version = "0.4.2", default-features = false }
