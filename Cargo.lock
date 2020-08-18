@@ -55,6 +55,7 @@ dependencies = [
 [[package]]
 name = "advanca-crypto-types"
 version = "0.3.1"
+source = "git+https://github.com/advanca/advanca-sgx-helper.git?rev=e3e6886c9d0e5fd9b673c0365012bd861edc0e39#e3e6886c9d0e5fd9b673c0365012bd861edc0e39"
 dependencies = [
  "curve25519-dalek",
  "schnorrkel",
