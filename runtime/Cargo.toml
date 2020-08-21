@@ -3,7 +3,7 @@ authors = ['Advanca Authors']
 edition = '2018'
 license = 'GPL-3.0'
 name = 'advanca-runtime'
-version = '0.3.0'
+version = '0.4.0'
 
 [dependencies]
 advanca-node-primitives = { path = "../advanca-node-primitives/", default-features = false }
@@ -189,7 +189,7 @@ version = '2.0.0-rc5'
 [dependencies.advanca-core]
 default-features = false
 path = '../pallets/advanca-core'
-version = '0.3.0'
+version = '0.4.0'
 
 [dependencies.timestamp]
 default-features = false
