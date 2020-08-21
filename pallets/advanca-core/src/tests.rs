@@ -40,12 +40,12 @@ fn registration() {
         let deposit = 0;
         let user_account = 0x0;
         let user_account_with_no_balance = 0x1000;
-        let user_public_key: Vec<u8> = "user_public_key".into();
+        let _user_public_key: Vec<u8> = "user_public_key".into();
         let worker_account = 0x1;
         let enclave: Enclave<u64> = Default::default();
 
         assert_noop!(
-            AdvancaCore::register_user(Origin::none(), deposit, user_public_key.clone()),
+            AdvancaCore::register_user(Origin::none(), deposit, PublicKeys::default()),
             DispatchError::BadOrigin
         );
         assert_noop!(
@@ -57,7 +57,7 @@ fn registration() {
             AdvancaCore::register_user(
                 Origin::signed(user_account_with_no_balance),
                 deposit + 1,
-                user_public_key.clone()
+                PublicKeys::default()
             ),
             BalancesError::InsufficientBalance
         );
@@ -73,13 +73,13 @@ fn registration() {
         assert_ok!(AdvancaCore::register_user(
             Origin::signed(user_account),
             deposit,
-            user_public_key.clone()
+            PublicKeys::default()
         ));
         assert_eq!(
             AdvancaCore::get_user(&user_account),
             User {
                 account_id: user_account.clone(),
-                public_key: user_public_key.clone()
+                public_keys: PublicKeys::default(),
             }
         );
         assert_eq!(
@@ -124,6 +124,7 @@ fn submit_task() {
             AdvancaCore::submit_task(
                 Origin::none(),
                 signed_owner_task_pubkey.to_owned(),
+                signed_owner_task_pubkey.to_owned(),
                 lease,
                 task_spec.clone()
             ),
@@ -136,6 +137,7 @@ fn submit_task() {
 
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey.clone(),
             signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone(),
@@ -150,6 +152,7 @@ fn submit_task() {
 
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
+            signed_owner_task_pubkey.clone(),
             signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone(),
@@ -171,11 +174,13 @@ fn submit_task() {
                 task_id: task_id1,
                 status: TaskStatus::Unscheduled,
                 owner: account,
-                signed_owner_task_pubkey: signed_owner_task_pubkey.clone(),
+                signed_owner_task_secp256r1_pubkey: signed_owner_task_pubkey.clone(),
+                signed_owner_task_sr25519_pubkey: signed_owner_task_pubkey.clone(),
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
-                signed_worker_task_pubkey: None,
+                signed_enclave_task_secp256r1_pubkey: None,
+                signed_enclave_task_sr25519_pubkey: None,
                 worker_url: None,
                 worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
@@ -186,11 +191,13 @@ fn submit_task() {
                 task_id: task_id2,
                 status: TaskStatus::Unscheduled,
                 owner: account,
-                signed_owner_task_pubkey: signed_owner_task_pubkey,
+                signed_owner_task_secp256r1_pubkey: signed_owner_task_pubkey.clone(),
+                signed_owner_task_sr25519_pubkey: signed_owner_task_pubkey.clone(),
                 task_spec: task_spec.clone(),
                 lease: lease,
                 worker: None,
-                signed_worker_task_pubkey: None,
+                signed_enclave_task_secp256r1_pubkey: None,
+                signed_enclave_task_sr25519_pubkey: None,
                 worker_url: None,
                 worker_heartbeat_evidence: worker_heartbeat_evidence.clone()
             }
@@ -214,6 +221,7 @@ fn accept_task() {
                 Origin::none(),
                 fake_task_id,
                 signed_eph_pubkey.clone(),
+                signed_eph_pubkey.clone(),
                 url.clone()
             ),
             DispatchError::BadOrigin
@@ -224,6 +232,7 @@ fn accept_task() {
             AdvancaCore::accept_task(
                 Origin::signed(worker_account),
                 fake_task_id,
+                signed_eph_pubkey.clone(),
                 signed_eph_pubkey.clone(),
                 url.clone()
             ),
@@ -244,6 +253,7 @@ fn accept_task() {
                 Origin::signed(worker_account),
                 task_id,
                 signed_eph_pubkey.clone(),
+                signed_eph_pubkey.clone(),
                 url.clone()
             ),
             "task must not be scheduled"
@@ -254,7 +264,8 @@ fn accept_task() {
         // check task is scheduled
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(user_account),
-            signed_owner_task_pubkey,
+            signed_owner_task_pubkey.clone(),
+            signed_owner_task_pubkey.clone(),
             lease,
             task_spec,
         ));
@@ -266,6 +277,7 @@ fn accept_task() {
             AdvancaCore::accept_task(
                 Origin::signed(worker_account),
                 task_id,
+                signed_eph_pubkey.clone(),
                 signed_eph_pubkey.clone(),
                 url.clone()
             ),
@@ -283,6 +295,7 @@ fn accept_task() {
         assert_ok!(AdvancaCore::accept_task(
             Origin::signed(worker_account),
             task_id.clone(),
+            signed_eph_pubkey.clone(),
             signed_eph_pubkey.clone(),
             url.clone()
         ));
@@ -325,6 +338,7 @@ fn update_task() {
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
             signed_owner_task_pubkey.clone(),
+            signed_owner_task_pubkey.clone(),
             lease,
             task_spec.clone()
         ));
@@ -352,9 +366,11 @@ fn update_task() {
                 task_id: task_id,
                 status: TaskStatus::Unscheduled,
                 owner: account,
-                signed_owner_task_pubkey: signed_owner_task_pubkey,
+                signed_owner_task_secp256r1_pubkey: signed_owner_task_pubkey.clone(),
+                signed_owner_task_sr25519_pubkey: signed_owner_task_pubkey.clone(),
                 worker: None,
-                signed_worker_task_pubkey: None,
+                signed_enclave_task_secp256r1_pubkey: None,
+                signed_enclave_task_sr25519_pubkey: None,
                 lease: lease,
                 task_spec: task_spec_update,
                 worker_url: None,
@@ -372,7 +388,8 @@ fn abort_task() {
         let fake_account = 0x1;
         let fake_task_id = AdvancaCore::task_id(&fake_account, 0);
         let default = Default::default();
-        let signed_owner_task_pubkey = Default::default();
+        let signed_owner_task_secp256r1_pubkey = Default::default();
+        let signed_owner_task_sr25519_pubkey = Default::default();
 
         // make sure panics panic
         assert_noop!(
@@ -384,7 +401,8 @@ fn abort_task() {
         let task_spec = Default::default();
         assert_ok!(AdvancaCore::submit_task(
             Origin::signed(account),
-            signed_owner_task_pubkey,
+            signed_owner_task_secp256r1_pubkey,
+            signed_owner_task_sr25519_pubkey,
             lease,
             task_spec,
         ));
