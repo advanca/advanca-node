@@ -42,11 +42,6 @@ pub use advanca_node_primitives::*;
 
 use schnorrkel;
 
-const PER_BLOCK_COST: u32 = 1_000_000;
-const PER_DAY_BLOCKS: u32 = 14_400;
-
-const SIGNING_CONTEXT: &[u8] = b"advanca-sign";
-
 // Copied the sr25519 verification stuff here
 pub fn sr25519_verify_msg(pubkey: &Sr25519PublicKey, signed_msg: &Sr25519SignedMsg) -> bool {
     sr25519_verify_signature(pubkey, &signed_msg.msg, &signed_msg.signature)
