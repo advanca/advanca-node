@@ -31,7 +31,6 @@ pub const PER_BLOCK_COST: u32 = 1_000_000;
 pub const PER_DAY_BLOCKS: u32 = 14_400;
 pub const SIGNING_CONTEXT: &[u8] = b"advanca-sign";
 
-
 /// Duration of the task. 0 means unlimited.
 pub type Duration = u64;
 
