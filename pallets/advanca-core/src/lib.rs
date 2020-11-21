@@ -14,26 +14,34 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-/// The runtime module for Advanca core functions
+
+/// Edit this file to define custom logic or remove it if it is not needed.
+/// Learn more about FRAME and the core library of Substrate FRAME pallets:
+/// https://substrate.dev/docs/en/knowledgebase/runtime/frame
+
+use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch, traits::Get};
+use frame_system::ensure_signed;
+use frame_support::traits::BalanceStatus;
+
 #[cfg(test)]
 mod mock;
+
 #[cfg(test)]
 mod tests;
 
 use advanca_crypto_types::*;
 
-use frame_support::traits::BalanceStatus;
 use frame_support::traits::{Currency, ReservableCurrency};
 
 use frame_support::{
-    codec::Encode, decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult,
+    codec::Encode,  dispatch::DispatchResult,
     ensure,
 };
 // use smart_default::SmartDefault;
 // use sp_runtime::RuntimeDebug;
 use sp_api::HashT;
 
-use frame_system::{self as system, ensure_signed};
+use frame_system::{self as system};
 use sp_std::prelude::*;
 
 use frame_support::debug;
@@ -46,6 +54,7 @@ const PER_BLOCK_COST: u32 = 1_000_000;
 const PER_DAY_BLOCKS: u32 = 14_400;
 
 const SIGNING_CONTEXT: &[u8] = b"advanca-sign";
+
 
 // Copied the sr25519 verification stuff here
 pub fn sr25519_verify_msg(pubkey: &Sr25519PublicKey, signed_msg: &Sr25519SignedMsg) -> bool {
@@ -70,22 +79,15 @@ pub type BalanceOf<T> =
 pub type TaskId<T> = <T as system::Trait>::Hash;
 pub type Index<T> = <T as system::Trait>::Index;
 
-/// The module's configuration trait.
-pub trait Trait: system::Trait {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
-    /// The currency to be handled in this module
-    type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-}
 
-// Error from the module
-decl_error! {
-    pub enum Error for Module<T: Trait> {
-        //TODO: add more explicit error variants
-        AlreadyRegistered,
-        NotFound,
-    }
+/// Configure the pallet by specifying the parameters and types on which it depends.
+pub trait Trait: frame_system::Trait {
+	/// Because this pallet emits events, it depends on the runtime's definition of an event.
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+
+	/// The currency to be handled in this module
+	type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 }
 
 // This module's storage items.
@@ -107,6 +109,44 @@ decl_storage! {
         /// A convenient place to find unscheduled tasks. Only IDs are kept.
         /// If a task becomes scheduled, it will be removed from this vector.
         UnscheduledTasks get(fn unscheduled_tasks): Vec<TaskId<T>>;
+    }
+}
+
+decl_event!(
+    pub enum Event<T>
+    where
+        AccountId = <T as system::Trait>::AccountId,
+        TaskId = TaskId<T>,
+    {
+        UserAdded(AccountId),
+        UserRemoved(AccountId),
+        TaskSubmitted(TaskId),
+        TaskUpdated(TaskId),
+        TaskAccepted(TaskId),
+        TaskCompleted(TaskId),
+        TaskAborted(TaskId),
+        WorkerAdded(AccountId),
+        WorkerRemoved(AccountId),
+    }
+);
+
+// Error from the module
+decl_error! {
+    pub enum Error for Module<T: Trait> {
+        //TODO: add more explicit error variants
+        AlreadyRegistered,
+        NotFound,
+    }
+}
+
+
+// Helper functions for the module
+impl<T: Trait> Module<T> {
+    /// Calculate task id as hash of the address + index
+    fn task_id(account_id: &T::AccountId, account_nonce: Index<T>) -> TaskId<T> {
+        let mut x = account_id.encode();
+        account_nonce.using_encoded(|a| x.append(&mut a.to_vec()));
+        T::Hashing::hash(&x)
     }
 }
 
@@ -356,31 +396,3 @@ decl_module! {
         }
     }
 }
-
-// Helper functions for the module
-impl<T: Trait> Module<T> {
-    /// Calculate task id as hash of the address + index
-    fn task_id(account_id: &T::AccountId, account_nonce: Index<T>) -> TaskId<T> {
-        let mut x = account_id.encode();
-        account_nonce.using_encoded(|a| x.append(&mut a.to_vec()));
-        T::Hashing::hash(&x)
-    }
-}
-
-decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as system::Trait>::AccountId,
-        TaskId = TaskId<T>,
-    {
-        UserAdded(AccountId),
-        UserRemoved(AccountId),
-        TaskSubmitted(TaskId),
-        TaskUpdated(TaskId),
-        TaskAccepted(TaskId),
-        TaskCompleted(TaskId),
-        TaskAborted(TaskId),
-        WorkerAdded(AccountId),
-        WorkerRemoved(AccountId),
-    }
-);

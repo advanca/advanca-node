@@ -161,4 +161,5 @@ pub struct Task<TaskId, AccountId, Duration, TaskSpec, TaskStatus, Ciphertext> {
     pub worker_url: Option<Ciphertext>,
     /// Worker's heartbeat evidence
     pub worker_heartbeat_evidence: Vec<Vec<u8>>,
+    
 }
