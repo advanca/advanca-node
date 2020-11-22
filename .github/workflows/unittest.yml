@@ -20,4 +20,4 @@ jobs:
     - name: install wasm
       run: ./scripts/init.sh
     - name: run tests
-      run: rustup install nightly-2020-10-06 && WASM_BUILD_TOOLCHAIN=nightly-2020-10-06 cargo test
+      run: cargo test
