@@ -17,9 +17,7 @@ jobs:
         profile: minimal
         toolchain: stable
         components: rustfmt, clippy
-    - name: install nightly toochain
-      run: rustup install nightly-2020-10-06
     - name: install wasm
       run: ./scripts/init.sh
     - name: run tests
-      run: WASM_BUILD_TOOLCHAIN=nightly-2020-10-06 cargo test
+      run: rustup install nightly-2020-10-06 && WASM_BUILD_TOOLCHAIN=nightly-2020-10-06 cargo test

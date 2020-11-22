@@ -16,7 +16,7 @@
 // Creating mock runtime here
 
 use crate::*;
-use balances;
+use pallet_balances;
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use frame_system as system;
 use sp_core::H256;
@@ -66,20 +66,21 @@ impl system::Trait for TestRuntime {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
-    type AccountData = balances::AccountData<u64>;
+    type AccountData = pallet_balances::AccountData<u64>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
+    type PalletInfo = ();
 }
 
-impl balances::Trait for TestRuntime {
+impl pallet_balances::Trait for TestRuntime {
     type Balance = u64;
     type Event = TestEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type MaxLocks = ();
 }
 
 mod advanca_core {
@@ -89,7 +90,7 @@ mod advanca_core {
 impl_outer_event! {
     pub enum TestEvent for TestRuntime {
         advanca_core<T>,
-        balances<T>,
+        pallet_balances<T>,
         system<T>,
     }
 }
@@ -101,8 +102,8 @@ impl Trait for TestRuntime {
 
 pub type AdvancaCore = Module<TestRuntime>;
 pub type AdvancaCoreError = Error<TestRuntime>;
-pub type Balances = balances::Module<TestRuntime>;
-pub type BalancesError = balances::Error<TestRuntime, balances::DefaultInstance>;
+pub type Balances = pallet_balances::Module<TestRuntime>;
+pub type BalancesError = pallet_balances::Error<TestRuntime, pallet_balances::DefaultInstance>;
 pub type System = system::Module<TestRuntime>;
 
 // This function basically just builds a genesis storage key/value store according to
@@ -112,7 +113,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<TestRuntime>()
         .unwrap();
     // pre-fund the account 0x0 with initial balance.
-    balances::GenesisConfig::<TestRuntime> {
+    pallet_balances::GenesisConfig::<TestRuntime> {
         balances: vec![(0, 1000_000_000_000)],
     }
     .assimilate_storage(&mut t)
