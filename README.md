@@ -1,3 +1,9 @@
+# Advanca is now [Automata](https://ata.network).
+
+The development is moved to https://github.com/automata-network/automata. Come and join us there!
+
+----------
+
 # Advanca Node
 
 This repository contains the source code for Advanca Node.
